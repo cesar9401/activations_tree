@@ -1,0 +1,31 @@
+Gramática que reconozca definición de procedimientos y que reconozca llamadas a procedimientos,
+y generar con árbol de activaciones usando graphviz.
+
+
+Ejemplo:
+
+
+programa NOMBRE
+	procedimiento NOMBRE (param)
+
+		NOMBRE2();
+	end
+
+	procedimiento NOMBRE2 (param)
+		NOMBRE3()
+		NOMBRE()
+	end
+
+	procedimiento NOMBRE3 (param)
+		NOMBRE(3)
+	end
+
+
+	begin
+		x : integer;
+
+		y : integer;
+		x := NOMBRE(params);
+
+		NOMBRE(params);
+	end

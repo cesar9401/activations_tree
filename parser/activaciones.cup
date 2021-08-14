@@ -1,0 +1,166 @@
+package com.cesar31.activaciones.parser;
+
+import java_cup.runtime.Symbol;
+import java.util.ArrayList;
+import java.util.List;
+
+import com.cesar31.activaciones.instruction.*;
+
+class ActivacionesParser;
+
+parser code {:
+	public ActivacionesParser(ActivacionesLex lex) {
+		super(lex);
+	}
+
+	public void syntax_error(Symbol cur_token) {
+		List<String> expected = new ArrayList<>();
+		List<Integer> tokens = expected_token_ids();
+
+		System.out.printf("Se encontro: %s -> (%s), linea %d columna %d, se esperaba -> ", cur_token.value, symbl_name_from_id(cur_token.sym), cur_token.left, cur_token.right);
+		for(Integer i : tokens) {
+			// expected.add(symbl_name_from_id(i));
+			System.out.printf("%s, ", symbl_name_from_id(i));
+		}
+		System.out.println("");
+	}
+:}
+
+terminal INTEGER, ID, PROGRAM, PROCESS, VAR, LPAREN, RPAREN, BEGIN, END, COLON, EQUAL, PLUS, MINUS, TIMES, DIVIDE, ERROR;
+terminal INT, CHAR, REAL, BOOLEAN, STRING, BOOL, UMINUS, SEMI, COMMA;
+
+non terminal statement, id_list, type;
+non terminal args_list;
+non terminal args, arg, params_list, params;
+non terminal List<Instruction> instructions, structure, program, body;
+non terminal Function function;
+non terminal List<Function> def_functions;
+non terminal Operation expr, assignment;
+non terminal FunctionCall call;
+
+/* precedences */
+precedence left PLUS, MINUS;
+precedence left TIMES, DIVIDE;
+precedence left UMINUS;
+
+program ::=
+			PROGRAM ID structure:structure
+				{: RESULT = structure; :}
+			;
+
+structure ::=
+			def_functions:list_f body:body
+				{:
+					RESULT = new ArrayList<Instruction>();
+					RESULT.addAll(list_f);
+					RESULT.addAll(body);
+				:}
+			;
+
+body ::=
+			BEGIN instructions:ins END
+				{: RESULT = ins; :}
+			;
+
+def_functions ::=
+			def_functions:list_f function:fun
+				{:
+					RESULT = list_f;
+					RESULT.add(fun);
+				:}
+			| function:fun
+				{:
+					RESULT = new ArrayList<>();
+					RESULT.add(fun);
+				:}
+			;
+
+instructions ::=
+			instructions:list statement
+				{: RESULT = list; :}
+			| instructions:list assignment:assign
+				{: RESULT = list;  RESULT.add(assign); :}
+			| instructions:list call:function_call
+				{:
+					RESULT = list;
+					RESULT.add(function_call);
+				:}
+			|
+				{: RESULT = new ArrayList<Instruction>(); :}
+			;
+
+/* declaracion */
+statement ::=
+			VAR id_list COLON type SEMI
+			;
+
+id_list ::=
+			id_list COMMA ID
+			| ID
+			;
+
+type ::=
+			INT
+			| CHAR
+			| REAL
+			| BOOLEAN
+			| STRING
+			;
+
+/* asignacion */
+assignment ::=
+			ID EQUAL expr:expr
+				{: RESULT = expr; :}
+			;
+
+/* functions */
+function ::=
+			PROCESS ID:name LPAREN args_list RPAREN BEGIN instructions:ins END
+				{: RESULT = new Function(name.toString(), ins); :}
+			;
+
+args_list ::=
+			args
+			|
+			;
+
+args ::=
+			args COMMA arg
+			| arg
+			;
+
+arg ::=
+			ID COLON type
+			;
+/* function */
+
+/* function call */
+call ::=
+			ID:name LPAREN params_list RPAREN SEMI
+				{: RESULT = new FunctionCall(name.toString()); :}
+			;
+
+params_list ::=
+			params
+			|
+			;
+
+params ::=
+			params COMMA expr
+			| expr
+			;
+/* function call */
+
+expr ::=
+			expr PLUS expr
+			| expr MINUS expr
+			| expr TIMES expr
+			| expr DIVIDE expr
+			| MINUS expr %prec UMINUS
+			| LPAREN expr RPAREN
+			| INTEGER
+			| BOOL
+			| ID
+			| call:function_call
+				{: RESULT = new Operation(function_call); :}
+			;
